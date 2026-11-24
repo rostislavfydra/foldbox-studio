@@ -12,9 +12,9 @@ async function build() {
   fs.mkdirSync(pdfOut,{recursive:true});
   await esbuild.build({...common,entryPoints:[path.join(root,'src/main.js')],outfile:path.join(dist,'studio.js'),
     loader:{'.webp':'dataurl','.svg':'dataurl','.pdf':'dataurl'},target:'es2020',
-    assetNames:'a4/[name]-[hash]',
-    plugins:[{name:'a4-print-textures',setup(build) {
-      build.onLoad({filter:/[/\\]a4-designs[/\\].+-(inside|outside)\.webp$/},async ({path:file})=>
+    outbase:path.join(root,'src','booklet-art'),assetNames:'[dir]/[name]-[hash]',
+    plugins:[{name:'booklet-print-textures',setup(build) {
+      build.onLoad({filter:/[/\\]a[34][/\\].+-(inside|outside)\.webp$/},async ({path:file})=>
         ({contents:await fs.promises.readFile(file),loader:'file'}));
     }}]});
   await esbuild.build({...common,entryPoints:[path.join(root,'src/pdf-renderer.js')],outfile:path.join(dist,'booklet-pdf.js'),

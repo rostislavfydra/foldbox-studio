@@ -5,7 +5,7 @@ import { templateProject,copyProject,customArtwork,storedProject,decodeImage,ima
 import { setupEditor } from './editor.js';
 import { formats, sheetSides, loadPaper, templateBlob } from './booklet.js';
 import { importSpreads } from './spread-import.js';
-import { a4Presets, a4PresetById, artworkForA4 } from './a4-presets.js';
+import { bookletPresets, presetById, artworkForPreset } from './booklet-presets.js';
 
 const byId = id => document.getElementById(id);
 const viewport = byId('viewport'), fieldset = byId('settings');
@@ -14,7 +14,8 @@ const sizeHint = byId('size-hint'), status = byId('export-status');
 const format = new Intl.NumberFormat('ru-RU',{useGrouping:false, maximumFractionDigits:3});
 const defaults = {width:410, depth:300.3, height:105, flap:100.085, estimatedHeight:true, open:false, varnish:true, foil:true, artwork:'center', artworkVersion:3, resolution:2048};
 Object.assign(defaults,{product:'box',bookletFormat:'A4',bookletInserted:false,bookletReveal:55,bookletSide:'inside',
-  bookletGuides:true,a4Preset:'',a4Guides:false});
+  bookletGuides:true,a4Preset:'',a4Guides:false,a3Preset:null,a3Guides:false});
+const presetKey = size => size.toLowerCase()+'Preset';
 const limits = {width:[60,1200,'Ширина'],depth:[60,1200,'Глубина'],height:[12,600,'Высота'],flap:[5,600,'Длина клапана']};
 const key = 'foldbox-studio:settings:v1';
 const state = {...defaults};
@@ -35,8 +36,11 @@ try {
   if (Object.keys(formats).includes(stored.bookletFormat)) state.bookletFormat=stored.bookletFormat;
   if (stored.bookletSide==='outside') state.bookletSide='outside';
   if (Number.isInteger(stored.bookletReveal) && stored.bookletReveal>=0 && stored.bookletReveal<=100) state.bookletReveal=stored.bookletReveal;
-  for (const k of ['bookletInserted','bookletGuides','a4Guides']) if(typeof stored[k]==='boolean')state[k]=stored[k];
-  if (a4PresetById(stored.a4Preset)) state.a4Preset=stored.a4Preset;
+  for (const k of ['bookletInserted','bookletGuides','a4Guides','a3Guides']) if(typeof stored[k]==='boolean')state[k]=stored[k];
+  for (const size of Object.keys(formats)) {
+    const name=presetKey(size);
+    if (stored[name]==='' || presetById(size,stored[name])) state[name]=stored[name];
+  }
 } catch { /* Private browsing can disable local storage. */ }
 const linked=new URLSearchParams(location.search);
 const linkedProduct=linked.get('model'), linkedFormat=linked.get('format');
@@ -60,19 +64,18 @@ let frameId=0,thumbTimer=0,dimensionsTimer=0,previousDownload='';
 let loadingDesign=false,designRevision=0;
 let savedProject=null;
 let paper, paperBusy=false;
-let sharedSheet={art:{outside:null,inside:null},images:{}}, personalA4=null, presetA4=null;
-function separateA4() {
-  return state.bookletFormat==='A4' && (presetA4 || personalA4);
-}
-function currentSheet() {return separateA4() || sharedSheet;}
-function guideSetting() {return separateA4() ? 'a4Guides' : 'bookletGuides';}
+let sharedSheet={art:{outside:null,inside:null},images:{}};
+const personalSheets={}, selectedSheets={};
+function formatSheet(size=state.bookletFormat) {return selectedSheets[size] || personalSheets[size];}
+function currentSheet() {return formatSheet() || sharedSheet;}
+function guideSetting() {return formatSheet() ? state.bookletFormat.toLowerCase()+'Guides' : 'bookletGuides';}
 
-// Original projects share uploaded sides across formats. An edited A4 edition
-// gets its own copy so replacing one side cannot change the stored A3 artwork.
-function setPersonalSheet(sheet) {
-  if (separateA4()) {
-    personalA4=sheet;presetA4=null;state.a4Preset='';
-    return 'booklet-art-a4';
+// Keep legacy uploads shared until the user edits a format-specific edition.
+function setPersonalSheet(sheet,fromPreset=false) {
+  const size=state.bookletFormat;
+  if (fromPreset || formatSheet(size) || (size==='A3' && state.a3Preset!==null)) {
+    personalSheets[size]=sheet;selectedSheets[size]=null;state[presetKey(size)]='';
+    return 'booklet-art-'+size.toLowerCase();
   }
   sharedSheet=sheet;
   return 'booklet-art';
@@ -116,17 +119,22 @@ function updateTrayHint() {
   byId('insert-booklet').disabled=!ready || busy || paperBusy || !valid || !fit;
 }
 
-const presetButtons=[...a4Presets,{id:'',label:'Свой макет'}].map(item=>{
-  const button=document.createElement('button');
-  button.type='button';button.className='booklet-preset';button.dataset.preset=item.id;
-  const swatch=document.createElement(item.thumb ? 'img' : 'span');
-  if (item.thumb) {swatch.src=item.thumb;swatch.alt='';}
-  else {swatch.className='custom-sheet';swatch.setAttribute('aria-hidden','true');}
-  button.append(swatch,document.createTextNode(item.label));
-  button.addEventListener('click',()=>chooseA4Preset(item.id));
-  byId('a4-presets').append(button);
-  return button;
-});
+const presetButtons={};
+for (const [size,items] of Object.entries(bookletPresets)) {
+  const group=byId(size.toLowerCase()+'-presets');
+  if (!group) continue;
+  presetButtons[size]=[...items,{id:'',label:'Свой макет'}].map(item=>{
+    const button=document.createElement('button');
+    button.type='button';button.className='booklet-preset';button.dataset.preset=item.id;
+    const swatch=document.createElement(item.thumb ? 'img' : 'span');
+    if (item.thumb) {swatch.src=item.thumb;swatch.alt='';}
+    else {swatch.className='custom-sheet';swatch.setAttribute('aria-hidden','true');}
+    button.append(swatch,document.createTextNode(item.label));
+    button.addEventListener('click',()=>choosePreset(size,item.id));
+    group.append(button);
+    return button;
+  });
+}
 
 function bookletUI() {
   const solo=state.product==='booklet', spec=formats[state.bookletFormat];
@@ -137,9 +145,9 @@ function bookletUI() {
   byId('booklet-caption').textContent=state.bookletFormat+' · '+spec.width+' × '+spec.depth+' мм';
   for (const id of ['box-geometry','box-lid']) byId(id).hidden=solo;
   for (const id of ['booklet-geometry','booklet-art']) byId(id).hidden=!solo;
-  byId('a4-library').hidden=!solo || state.bookletFormat!=='A4';
-  for (const button of presetButtons) {
-    button.setAttribute('aria-pressed',String(button.dataset.preset===(presetA4?.id || '')));
+  for (const [size,buttons] of Object.entries(presetButtons)) {
+    byId(size.toLowerCase()+'-library').hidden=!solo || state.bookletFormat!==size;
+    for (const button of buttons) button.setAttribute('aria-pressed',String(button.dataset.preset===(selectedSheets[size]?.id || '')));
   }
   for (const product of ['box','booklet']) byId('model-'+product).setAttribute('aria-pressed',String(state.product===product));
   viewport.setAttribute('aria-label','3D-модель '+(solo?'буклета':'коробки')+'. Используйте стрелки для вращения, плюс и минус для масштаба.');
@@ -182,8 +190,7 @@ function selectProduct(product) {
 byId('model-booklet').addEventListener('click',()=>selectProduct('booklet'));
 byId('model-box').addEventListener('click',()=>selectProduct('box'));
 for (const key of Object.keys(formats)) byId('paper-'+key.toLowerCase()).addEventListener('click',()=>{
-  if (!ready || busy || paperBusy) return;
-  state.bookletFormat=key;updateProductUrl();refreshBooklet();
+  activateFormat(key,()=>{updateProductUrl();refreshBooklet();});
 });
 function revealBooklet(reveal, side) {
   if (!ready || busy || paperBusy) return;
@@ -210,17 +217,32 @@ async function editSheet(progress, edit) {
   catch(error) {paperMessage(error.message || 'Не удалось применить оформление буклета.',true);}
   finally {paperBusy=false;fieldset.disabled=false;bookletUI();exportAvailability();}
 }
-async function loadA4Preset(preset) {
-  const art=await artworkForA4(preset);
+async function loadPreset(preset) {
+  const art=await artworkForPreset(preset);
   return {id:preset.id,art,images:await spreadImages(art,decodeImage)};
 }
-function chooseA4Preset(id) {
-  if (state.bookletFormat!=='A4' || id===(presetA4?.id || '')) return;
+async function restorePreset(size) {
+  const id=state[presetKey(size)];
+  const firstA3=size==='A3' && id===null && !personalSheets.A3 && !sheetSides.some(side=>sharedSheet.art[side]);
+  const preset=firstA3 ? bookletPresets.A3[0] : presetById(size,id);
+  if (preset && selectedSheets[size]?.id!==preset.id) {
+    selectedSheets[size]=await loadPreset(preset);
+    state[presetKey(size)]=preset.id;
+  }
+}
+function activateFormat(size,apply) {
+  return editSheet('Загрузка разворота…',async()=>{
+    try {await restorePreset(size);}
+    finally {state.bookletFormat=size;apply();}
+  });
+}
+function choosePreset(size,id) {
+  if (state.bookletFormat!==size || (id===(selectedSheets[size]?.id || '') && id===state[presetKey(size)])) return;
   return editSheet('Загрузка варианта…',async()=>{
-    const preset=a4PresetById(id);
-    presetA4=preset ? await loadA4Preset(preset) : null;
-    state.a4Preset=id;
-    if (preset) state.a4Guides=false;
+    const preset=presetById(size,id);
+    selectedSheets[size]=preset ? await loadPreset(preset) : null;
+    state[presetKey(size)]=id;
+    if (preset) state[guideSetting()]=false;
     refreshBooklet();
   });
 }
@@ -293,10 +315,12 @@ byId('insert-booklet').addEventListener('click',()=>{
 });
 byId('tray-booklet').addEventListener('change',e=>{
   if (!ready || busy || paperBusy) return;
-  state.bookletInserted=!!e.target.value;
-  if (state.bookletInserted) state.bookletFormat=e.target.value;
-  refreshBooklet();
-  if (state.bookletInserted && studio.bookletFit) setLid(true);
+  const size=e.target.value;
+  if (!size) {state.bookletInserted=false;refreshBooklet();return;}
+  activateFormat(size,()=>{
+    state.bookletInserted=true;refreshBooklet();
+    if (studio.bookletFit) setLid(true);
+  });
 });
 
 const designButtons=designs.map(design=>{
@@ -562,14 +586,16 @@ setupEditor(async()=>{
   if (!valid || !ready || busy || loadingDesign) return null;
   const project=state.artwork==='custom' && savedProject ? copyProject(savedProject,state) : await templateProject(state,studio.box.baseImage());
   project.booklet={size:state.bookletFormat,inserted:state.bookletInserted,guides:state[guideSetting()],art:{...currentSheet().art}};
-  if (state.bookletFormat==='A4' && presetA4) project.booklet.preset=presetA4.id;
+  const selected=selectedSheets[state.bookletFormat];
+  if (selected) project.booklet.preset=selected.id;
   return project;
 },async project=>{
   const b=project.booklet;
-  const preset=b?.size==='A4' && a4PresetById(b.preset);
+  const preset=b && presetById(b.size,b.preset);
   let libraryArt;
   if (preset) {
-    try {libraryArt=presetA4?.id===preset.id ? presetA4.art : await artworkForA4(preset);}
+    const selected=selectedSheets[b.size];
+    try {libraryArt=selected?.id===preset.id ? selected.art : await artworkForPreset(preset);}
     catch { /* A saved project also carries its own copy of both images. */ }
   }
   const matchesPreset=libraryArt && sheetSides.every(side=>b.art[side]?.src===libraryArt[side].src);
@@ -581,11 +607,11 @@ setupEditor(async()=>{
   if (b) {
     Object.assign(state,{bookletFormat:b.size,bookletInserted:b.inserted});
     if (matchesPreset) {
-      presetA4={id:preset.id,art:b.art,images};state.a4Preset=preset.id;
+      selectedSheets[b.size]={id:preset.id,art:b.art,images};state[presetKey(b.size)]=preset.id;
     } else {
-      paperStorageKey=setPersonalSheet({art:b.art,images});
+      paperStorageKey=setPersonalSheet({art:b.art,images},!!b.preset);
     }
-    state[guideSetting()]=b.guides;
+    state[guideSetting()]=b.guides;updateProductUrl();
   } else state.bookletInserted=false;
   savedProject=project;
   cancelAnimationFrame(animationId);animating=false;pose=state.open ? 1 : 0;
@@ -626,7 +652,8 @@ async function exportImages(all) {
   busy=true;fieldset.disabled=true;exportAvailability();status.classList.remove('error');
   byId('settings').setAttribute('aria-busy','true');
   const size=state.resolution;
-  const edition=state.bookletFormat==='A4' && presetA4 ? '_'+presetA4.id : '';
+  const selected=selectedSheets[state.bookletFormat];
+  const edition=selected ? '_'+selected.id : '';
   const included=state.bookletInserted && studio.bookletFit ? '_booklet-'+state.bookletFormat.toLowerCase()+edition : '';
   const paperPose=state.bookletReveal===100 ? state.bookletSide : state.bookletReveal===0 ? 'folded' : 'fold-'+state.bookletReveal;
   const stem=solo ? 'booklet_'+state.bookletFormat.toLowerCase()+'_'+paperPose+edition :
@@ -681,18 +708,16 @@ requestAnimationFrame(async ()=>{
     });
     const paperAssets=loadPaper(studio.renderer);
     try {
-      const [previous,spreads,personal]=await Promise.all([
-        storedProject(),storedProject(undefined,'booklet-art'),storedProject(undefined,'booklet-art-a4')
+      const sizes=Object.keys(formats);
+      const [previous,spreads,...personal]=await Promise.all([
+        storedProject(),storedProject(undefined,'booklet-art'),...sizes.map(size=>storedProject(undefined,'booklet-art-'+size.toLowerCase()))
       ]);
       savedProject=previous || null;
       if (spreads) sharedSheet=await restoreSheet(spreads);
-      if (personal) personalA4=await restoreSheet(personal);
+      for (const [index,art] of personal.entries()) if (art) personalSheets[sizes[index]]=await restoreSheet(art);
     } catch { /* A fresh or unavailable local store still opens the original templates. */ }
-    const preset=a4PresetById(state.a4Preset);
-    if (preset) {
-      try {presetA4=await loadA4Preset(preset);}
-      catch {state.a4Preset='';}
-    }
+    try {await restorePreset(state.bookletFormat);}
+    catch(error) {paperMessage(error.message || 'Не удалось загрузить разворот. Выберите вариант ещё раз.',true);}
     if (state.artwork==='custom' && !savedProject) state.artwork=defaults.artwork;
     studio.setArtwork(state.artwork==='custom' ? await customArtwork(savedProject,studio)
       : await loadDesign(state.artwork,studio.renderer,studio.materials.bump));

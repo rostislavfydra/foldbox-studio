@@ -192,7 +192,7 @@ export async function validateProject(raw) {
     const b=raw.booklet;
     if (!b || !['A4','A3'].includes(b.size) || typeof b.inserted!=='boolean' || typeof b.guides!=='boolean') fail();
     out.booklet={size:b.size,inserted:b.inserted,guides:b.guides,art:await validateSpreads(b.art)};
-    if (b.size==='A4' && typeof b.preset==='string') out.booklet.preset=b.preset;
+    if (typeof b.preset==='string') out.booklet.preset=b.preset;
   }
   for (const name of ['lid','flap']) {
     const face=raw[name];
