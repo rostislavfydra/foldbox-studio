@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f9fafb">
+  <meta name="description" content="3D-модели коробки-книги и буклета в два сгиба. Макеты, размеры и выгрузка ракурсов.">
+  <title>Коробка-книга — Студия упаковки</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23243348'/%3E%3Cpath d='M7 15l13-7 13 7-13 7zm0 5 13 7 13-7M7 25l13 7 13-7' fill='none' stroke='%23efe8da' stroke-width='1.7'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="studio.css">
+  <script defer src="studio.js"></script>
+</head>
+<body>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-mark" viewBox="0 0 40 40"><path d="m5.5 14.5 14.5-8 14.5 8-14.5 8zM5.5 20.2l14.5 8 14.5-8m-29 5.7L20 34l14.5-8.1"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.4a2.4 2.4 0 0 1 4.7.4c0 1.7-2.4 1.9-2.4 3.6m0 2.6h.01"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m3 8.6 9-4.8 9 4.8-9 5zM3 8.6v6.7l9 4.9 9-4.9V8.6M12 13.6v6.6"/></symbol>
+    <symbol id="i-booklet" viewBox="0 0 24 24"><path d="m3 5 6-2 6 3 6-2v15l-6 2-6-3-6 2zM9 3v15m6-12v15"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="m3 11 8.7 3.6L21 11l-8.7-3.7zM3 11v5.7l8.7 3.7 9.3-3.7V11M11.7 14.6v5.8M12.3 7.3l-.9-4.8 8 3.4L21 11"/></symbol>
+    <symbol id="i-ruler" viewBox="0 0 24 24"><path d="m3.1 15.7 12.6-12.6 5.2 5.2L8.3 20.9zM7 11.8l2.1 2.1m1.3-5.4 2.1 2.1m1.2-5.4 2.1 2.1"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5M9 20H4v-5"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14m-7-7v14"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 3.5v11m-4-4 4 4 4-4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="i-stack" viewBox="0 0 24 24"><path d="m3 8 9-4.7L21 8l-9 4.6zM3.4 12l8.6 4.5 8.6-4.5m-17.2 4.3 8.6 4.4 8.6-4.4"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-orbit" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9.2" ry="4.5" transform="rotate(-27 12 12)"/><circle cx="12" cy="12" r="2.1"/><path d="M11.3 3.4a9.2 9.2 0 0 1 8.9 9.2M12.7 20.6a9.2 9.2 0 0 1-8.9-9.2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4.5 12.2 4.8 4.8 10.2-10.3"/></symbol>
+  </svg>
+  <header class="mast">
+    <div class="mast-inner">
+      <div class="brand"><span class="brand-icon"><svg class="ic"><use href="#i-mark"/></svg></span><span>Студия упаковки</span></div>
+      <span class="mast-context">3D-конфигуратор</span>
+      <button class="help-button" id="help"><svg class="ic"><use href="#i-help"/></svg><span>Справка</span></button>
+    </div>
+  </header>
+  <main>
+    <div class="page-title">
+      <h1 id="product-title">Коробка-книга</h1>
+      <span class="swatch-label" id="box-tone"><i id="tone-sample"></i><span id="tone-name">Тёмно-синий</span></span>
+      <span class="swatch-label" id="booklet-caption" hidden></span>
+      <nav class="product-switch segmented" aria-label="Выбор изделия">
+        <button id="model-box" aria-pressed="true"><svg class="ic"><use href="#i-box"/></svg>Коробка</button>
+        <button id="model-booklet" aria-pressed="false"><svg class="ic"><use href="#i-booklet"/></svg>Буклет</button>
+      </nav>
+    </div>
+    <div class="workspace">
+      <section class="viewer-column" aria-label="Просмотр модели">
+        <div class="stage" id="stage">
+          <canvas id="viewport" tabindex="0" aria-label="3D-модель коробки. Для вращения используйте клавиши со стрелками, для масштаба плюс и минус."></canvas>
+          <div class="stage-top">
+            <span class="view-label"><svg class="ic"><use href="#i-orbit"/></svg><span id="current-view">Вид ¾</span></span>
+            <button id="measure" class="surface-button" aria-pressed="false" title="Показать габариты в миллиметрах"><svg class="ic"><use href="#i-ruler"/></svg><span>Размеры</span></button>
+          </div>
+          <div class="stage-bottom">
+            <canvas id="axis" width="120" height="108" aria-hidden="true"></canvas>
+            <div class="camera-tools" aria-label="Масштаб модели">
+              <button id="zoom-out" aria-label="Уменьшить" title="Уменьшить"><svg class="ic"><use href="#i-minus"/></svg></button>
+              <output id="zoom">100%</output>
+              <button id="zoom-in" aria-label="Увеличить" title="Увеличить"><svg class="ic"><use href="#i-plus"/></svg></button>
+              <button id="fit" aria-label="Вернуть исходный вид" title="Вернуть исходный вид"><svg class="ic"><use href="#i-fit"/></svg></button>
+            </div>
+          </div>
+          <div id="scene-status" role="status">Подготовка модели…</div>
+        </div>
+        <div class="strip-head"><h2>Ракурсы</h2><span>Выберите вид для просмотра</span></div>
+        <div class="filmstrip" id="views" role="group" aria-label="Ракурсы модели"></div>
+      </section>
+      <aside class="inspector" aria-label="Настройки модели и выгрузка">
+        <fieldset id="settings">
+          <legend class="sr-only">Настройки модели</legend>
+          <section class="panel-section geometry" id="box-geometry">
+            <div class="section-heading"><h2>Габариты</h2><span>мм</span></div>
+            <div class="field-row">
+              <label for="width">Ширина<input id="width" inputmode="decimal" type="text" value="410" autocomplete="off" spellcheck="false" aria-describedby="size-hint"></label>
+              <label for="depth">Глубина<input id="depth" inputmode="decimal" type="text" value="300,3" autocomplete="off" spellcheck="false" aria-describedby="size-hint"></label>
+              <label for="height">Высота<input id="height" inputmode="decimal" type="text" value="105" autocomplete="off" spellcheck="false" aria-describedby="size-hint"></label>
+            </div>
+            <label class="flap-field" for="flap">Длина клапана<input id="flap" inputmode="decimal" type="text" value="100,085" autocomplete="off" spellcheck="false" aria-describedby="size-hint"></label>
+            <p id="size-hint" class="hint" aria-live="polite">Высота указана приблизительно.</p>
+            <div class="tray-booklet">
+              <label for="tray-booklet">Буклет внутри</label>
+              <select id="tray-booklet"><option value="">Без буклета</option><option>A4</option><option>A3</option></select>
+            </div>
+            <p class="hint" id="tray-hint" aria-live="polite" hidden></p>
+          </section>
+          <section class="panel-section construction" id="box-lid">
+            <h2>Крышка</h2>
+            <div class="segmented" role="group" aria-label="Положение крышки">
+              <button id="closed" aria-pressed="true"><svg class="ic"><use href="#i-box"/></svg>Закрыта</button>
+              <button id="opened" aria-pressed="false"><svg class="ic"><use href="#i-open"/></svg>Открыта</button>
+            </div>
+            <div class="art-heading"><h3>Макет крышки</h3><button id="base-art" aria-pressed="false">Базовый</button></div>
+            <div class="designs" id="designs" role="group" aria-label="Варианты оформления"></div>
+            <div id="base-finishes" hidden>
+              <div class="finish-row"><label for="varnish"><span class="finish-sample lacquer" aria-hidden="true"></span>Глянцевый орнамент</label><input class="switch" type="checkbox" id="varnish" checked></div>
+              <div class="finish-row"><label for="foil"><span class="finish-sample foil" aria-hidden="true"></span>Золотая печать</label><input class="switch" type="checkbox" id="foil" checked></div>
+            </div>
+            <p id="art-status" role="status"></p>
+            <div class="edit-actions"><button type="button" id="edit-design">Редактировать макет</button><button type="button" id="my-design" hidden>Мой макет</button></div>
+          </section>
+          <section class="panel-section booklet-geometry" id="booklet-geometry" hidden>
+            <div class="section-heading"><h2>Формат разворота</h2><span>мм</span></div>
+            <div class="segmented format-options" role="group" aria-label="Формат листа">
+              <button id="paper-a4" aria-pressed="true"><strong>A4</strong><small>297 × 210</small></button>
+              <button id="paper-a3" aria-pressed="false"><strong>A3</strong><small>420 × 297</small></button>
+            </div>
+            <dl class="booklet-spec"><div><dt>В сложенном виде</dt><dd id="folded-size"></dd></div><div><dt>Створки снаружи</dt><dd id="panel-widths"></dd></div></dl>
+            <label class="fold-heading" for="paper-fold">Раскрытие <output id="fold-value"></output></label>
+            <input id="paper-fold" type="range" min="0" max="100" step="1" value="55" aria-label="Раскрытие буклета">
+            <div class="fold-stops"><button id="fold-closed">Сложен</button><button id="fold-partial">Полураскрыт</button><button id="fold-flat">Разворот</button></div>
+            <div class="art-heading"><h3>Посмотреть сторону</h3></div>
+            <div class="sheet-tabs booklet-sides" role="group" aria-label="Сторона разворота"><button id="show-outside" aria-pressed="false">Наружная</button><button id="show-inside" aria-pressed="false">Внутренняя</button></div>
+          </section>
+          <section class="panel-section booklet-art" id="booklet-art" hidden>
+            <h2>Макет буклета</h2>
+            <div id="a4-library" hidden>
+              <div class="art-heading"><h3 id="a4-library-title">Варианты A4</h3></div>
+              <div class="booklet-presets" id="a4-presets" role="group" aria-labelledby="a4-library-title"></div>
+            </div>
+            <p class="hint">Выберите изображение или PDF. Файл можно перетащить на нужную сторону или вставить из буфера обмена.</p>
+            <div class="spread-file" data-spread="outside">
+              <span>Наружная сторона</span>
+              <span class="spread-tools"><label class="file-picker" id="upload-outside"><span id="file-action-outside">Загрузить</span><input id="file-outside" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.svg,.pdf,application/pdf" aria-label="Загрузить изображение или PDF на наружную сторону" disabled></label><button id="remove-outside" aria-label="Убрать оформление наружной стороны" hidden>Убрать</button></span>
+              <small class="spread-info" id="info-outside" hidden><img id="preview-outside" alt=""><span id="name-outside"></span></small>
+            </div>
+            <div class="spread-file" data-spread="inside">
+              <span>Внутренняя сторона</span>
+              <span class="spread-tools"><label class="file-picker" id="upload-inside"><span id="file-action-inside">Загрузить</span><input id="file-inside" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.svg,.pdf,application/pdf" aria-label="Загрузить изображение или PDF на внутреннюю сторону" disabled></label><button id="remove-inside" aria-label="Убрать оформление внутренней стороны" hidden>Убрать</button></span>
+              <small class="spread-info" id="info-inside" hidden><img id="preview-inside" alt=""><span id="name-inside"></span></small>
+            </div>
+            <div class="finish-row"><label for="paper-guides">Разметка шаблона</label><input id="paper-guides" class="switch" type="checkbox" checked></div>
+            <p class="hint" id="paper-status" role="status" hidden></p>
+            <div class="booklet-actions"><button id="paper-pdf">Скачать шаблон A4 · PDF</button><button id="insert-booklet">Положить в коробку</button></div>
+            <p class="hint" id="fit-hint" hidden></p>
+          </section>
+          <section class="panel-section export-panel">
+            <div class="section-heading"><h2>Выгрузка</h2><svg class="ic export-icon"><use href="#i-down"/></svg></div>
+            <div class="resolution"><label for="resolution">Разрешение</label><select id="resolution"><option value="1024">1024 × 1024 px</option><option value="2048" selected>2048 × 2048 px</option><option value="3072">3072 × 3072 px</option></select></div>
+            <p class="alpha-note"><span class="checker" aria-hidden="true"></span>PNG с прозрачным фоном</p>
+            <button class="export-button primary" id="export-all"><svg class="ic"><use href="#i-stack"/></svg><span id="export-all-label">Скачать 7 ракурсов</span><span class="format">ZIP</span></button>
+            <button class="export-button secondary" id="export-one"><svg class="ic"><use href="#i-down"/></svg><span>Скачать текущий вид</span><span class="format">PNG</span></button>
+          </section>
+        </fieldset>
+        <p id="export-status" role="status" aria-live="polite"></p>
+      </aside>
+    </div>
+  </main>
+  <dialog id="editor" aria-labelledby="editor-title">
+    <div class="editor-bar"><h2 id="editor-title">Редактор коробки</h2><button id="cancel-edit" class="icon-button" aria-label="Закрыть редактор"><svg class="ic"><use href="#i-close"/></svg></button></div>
+    <div class="editor-body">
+      <div class="sheet-workspace">
+        <div class="sheet-tools"><div class="sheet-tabs" role="group" aria-label="Поверхность для редактирования"><button id="edit-lid" aria-pressed="true">Крышка</button><button id="edit-flap" aria-pressed="false">Клапан</button></div><output id="sheet-size"></output></div>
+        <div class="sheet-stage" id="sheet-stage"><canvas id="sheet" tabindex="0" aria-label="Плоский макет. Выберите слой и перетащите его или используйте стрелки."></canvas></div>
+        <p class="editor-tip">Перетащите файл на макет или вставьте изображение из буфера. Выбранный слой можно двигать мышью и стрелками.</p>
+      </div>
+      <div class="layer-panel">
+        <div class="editor-upload"><button id="add-image">Добавить файл</button><button id="paste-svg">Код SVG</button><input id="layer-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></div>
+        <div id="svg-entry" hidden><label for="svg-source">Код SVG</label><textarea id="svg-source" rows="3" placeholder="&lt;svg …&gt;…&lt;/svg&gt;"></textarea><button id="insert-svg">Вставить SVG</button></div>
+        <label class="layer-selector" for="layers">Слой<select id="layers"></select></label>
+        <fieldset id="layer-controls">
+          <legend class="sr-only">Положение и размер слоя</legend>
+          <div class="placement-fields">
+            <label>Ширина, мм<input id="layer-w" inputmode="decimal"></label>
+            <label>Поворот, °<input id="layer-angle" inputmode="decimal"></label>
+            <label>Центр X, мм<input id="layer-x" inputmode="decimal"></label>
+            <label>Центр Y, мм<input id="layer-y" inputmode="decimal"></label>
+          </div>
+          <div class="layer-buttons"><button id="center-layer">По центру</button><button id="fill-layer">Заполнить грань</button></div>
+          <div class="layer-buttons stack-tools"><button id="raise-layer">Выше</button><button id="lower-layer">Ниже</button><button id="remove-layer">Удалить слой</button></div>
+        </fieldset>
+        <div class="color-fields">
+          <label>Фон грани<input type="color" id="face-color"></label>
+          <label>Цвет корпуса<input type="color" id="body-color"></label>
+        </div>
+      </div>
+    </div>
+    <p role="status" aria-live="polite" id="edit-status"></p>
+    <div class="editor-footer">
+      <button id="open-project">Открыть проект</button><input type="file" id="project-file" accept=".json,.box.json,application/json" hidden>
+      <button id="save-project">Скачать проект</button>
+      <button id="apply-edit" class="primary">Применить к коробке</button>
+    </div>
+  </dialog>
+  <dialog id="pdf-import" aria-labelledby="pdf-title">
+    <form method="dialog">
+      <h2 id="pdf-title">Страницы PDF</h2>
+      <p id="pdf-name" class="hint"></p>
+      <div class="pdf-spreads">
+        <label for="pdf-page-outside">Наружная сторона<span class="pdf-thumb" id="pdf-thumb-outside"></span><select id="pdf-page-outside"></select></label>
+        <label for="pdf-page-inside">Внутренняя сторона<span class="pdf-thumb" id="pdf-thumb-inside"></span><select id="pdf-page-inside"></select></label>
+      </div>
+      <div class="pdf-actions"><button id="pdf-cancel" value="cancel">Отмена</button><button id="pdf-apply" value="apply" class="primary">Применить страницы</button></div>
+    </form>
+  </dialog>
+  <dialog id="guide" aria-labelledby="guide-title">
+    <div class="guide-heading"><h2 id="guide-title">Управление моделью</h2><button id="close-help" aria-label="Закрыть справку"><svg class="ic"><use href="#i-close"/></svg></button></div>
+    <dl>
+      <dt>Поворот</dt><dd>Тяните модель мышью или одним пальцем. С клавиатуры используйте стрелки, когда модель в фокусе.</dd>
+      <dt>Масштаб</dt><dd>Крутите колесо, разведите два пальца или нажимайте кнопки «+» и «−». Клавиша Home возвращает вид ¾.</dd>
+      <dt>Габариты</dt><dd>Поля задают внешние размеры закрытой коробки. Длина клапана измеряется от сгиба до свободного края. В исходной развёртке верхняя панель имеет размер 410 × 300,255 мм, клапан — 410 × 100,085 мм.</dd>
+      <dt>Макет крышки</dt><dd>Макеты развёртки разделены по линии сгиба между верхней панелью и клапаном. В варианте «Побережье» фото заполняет крышку, а надпись сохраняет пропорции при любом размере.</dd>
+      <dt>Буклет</dt><dd>Форматы A4 и A3 указаны для листа после обрезки. Двигайте ползунок, чтобы сложить короткую створку внутрь и закрыть обложку. Для просмотра обеих сторон выберите «Наружная» или «Внутренняя». Разметку можно отключить. Кнопка «Положить в коробку» покажет сложенный буклет поверх вложений.</dd>
+      <dt>Оформление буклета</dt><dd>В разделе «Варианты A4» каждая карточка применяет оформление обеих сторон. Чтобы заменить одну сторону, выберите файл рядом с ней или перетащите его на неё. Изменения появятся в «Своём макете». Вставка из буфера на модели добавляет изображение на выбранную сторону. В многостраничном PDF выберите страницу для каждой стороны.</dd>
+      <dt>Выгрузка</dt><dd>Текущий вид сохраняет выбранный угол. В архиве буклета три изображения — вид ¾, сверху и снизу. В архиве коробки семь изображений. Фон PNG прозрачен. PDF буклета содержит две стороны технического шаблона.</dd>
+      <dt>Свой макет</dt><dd>Откройте редактор, выберите крышку или клапан и вставьте PNG, JPEG, WebP или SVG. «Применить к коробке» сохраняет макет в этом браузере. Файл проекта хранит размеры и слои для переноса и дальнейшего редактирования.</dd>
+    </dl>
+  </dialog>
+  <noscript>Для работы 3D-конфигуратора включите JavaScript в браузере.</noscript>
+</body>
+</html>
