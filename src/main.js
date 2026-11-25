@@ -1,6 +1,6 @@
 import { Studio, views, drawAxis } from './scene.js';
 import { makeZip } from './zip.js';
-import { designs, loadDesign } from './artwork.js';
+import { designs, designById, loadDesign } from './artwork.js';
 import { templateProject,copyProject,customArtwork,storedProject,decodeImage,imageFor,validateSpreads } from './project.js';
 import { setupEditor } from './editor.js';
 import { formats, sheetSides, loadPaper, templateBlob } from './booklet.js';
@@ -12,7 +12,7 @@ const viewport = byId('viewport'), fieldset = byId('settings');
 const single = byId('export-one'), batch = byId('export-all');
 const sizeHint = byId('size-hint'), status = byId('export-status');
 const format = new Intl.NumberFormat('ru-RU',{useGrouping:false, maximumFractionDigits:3});
-const defaults = {width:410, depth:300.3, height:105, flap:100.085, estimatedHeight:true, open:false, varnish:true, foil:true, artwork:'center', artworkVersion:3, resolution:2048};
+const defaults = {width:410, depth:300.3, height:105, flap:100.085, estimatedHeight:true, open:false, varnish:true, foil:true, artwork:'facade-emblem', artworkVersion:3, resolution:2048};
 Object.assign(defaults,{product:'box',bookletFormat:'A4',bookletInserted:false,bookletReveal:55,bookletSide:'inside',
   bookletGuides:true,a4Preset:'',a4Guides:false,a3Preset:null,a3Guides:false});
 const presetKey = size => size.toLowerCase()+'Preset';
@@ -28,7 +28,7 @@ try {
     if (typeof stored[name] === 'boolean') state[name]=stored[name];
   }
   if ([1024,2048,3072].includes(stored.resolution)) state.resolution=stored.resolution;
-  if (['base','custom'].includes(stored.artwork) || designs.some(item=>item.id===stored.artwork)) state.artwork=stored.artwork;
+  if (['base','custom'].includes(stored.artwork) || designById(stored.artwork)) state.artwork=stored.artwork;
   if (stored.artworkVersion!==defaults.artworkVersion) {state.artwork=defaults.artwork;state.open=false;}
   if (stored.flap===undefined && state.estimatedHeight) state.height=defaults.height;
   if (state.flap>state.height) state.flap=Math.round(state.height*.95*1000)/1000;
@@ -46,12 +46,24 @@ const linked=new URLSearchParams(location.search);
 const linkedProduct=linked.get('model'), linkedFormat=linked.get('format');
 if (['box','booklet'].includes(linkedProduct)) state.product=linkedProduct;
 if (linkedProduct==='booklet' && Object.hasOwn(formats,linkedFormat)) state.bookletFormat=linkedFormat;
+if (linkedProduct==='box') {
+  const design=linked.get('design'), lid=linked.get('lid');
+  if (design==='base' || designById(design)) state.artwork=design;
+  if (lid==='open' || lid==='closed') state.open=lid==='open';
+}
 function persist() { try {localStorage.setItem(key,JSON.stringify(state));} catch {} }
 function updateProductUrl() {
   const url=new URL(location.href);
   url.searchParams.set('model',state.product);
-  if (state.product==='booklet') url.searchParams.set('format',state.bookletFormat);
-  else url.searchParams.delete('format');
+  if (state.product==='booklet') {
+    url.searchParams.set('format',state.bookletFormat);
+    url.searchParams.delete('design');url.searchParams.delete('lid');
+  } else {
+    url.searchParams.delete('format');
+    if (state.artwork==='custom') url.searchParams.delete('design');
+    else url.searchParams.set('design',state.artwork);
+    if (url.searchParams.has('lid')) url.searchParams.set('lid',state.open ? 'open' : 'closed');
+  }
   try {history.replaceState(null,'',url);} catch {}
 }
 
@@ -343,16 +355,20 @@ function showSelection(id) {
   byId('tone-sample').style.background=tint;
   byId('tone-name').textContent=tint.toLowerCase()==='#24354c' ? 'Тёмно-синий' : tint.toUpperCase();
 }
+function boxArtwork(id) {
+  const project=id==='custom' ? savedProject : designById(id)?.project;
+  return project ? customArtwork(project,studio) : loadDesign(id,studio.renderer,studio.materials.bump);
+}
 async function selectDesign(id) {
   if (!ready || busy) return;
   const revision=++designRevision;
   loadingDesign=true;exportAvailability();showSelection(id);
   byId('art-status').textContent='Применение макета…';
   try {
-    const pair=id==='custom' ? await customArtwork(savedProject,studio) : await loadDesign(id,studio.renderer,studio.materials.bump);
+    const pair=await boxArtwork(id);
     if (revision!==designRevision) {pair?.dispose();return;}
     studio.setArtwork(pair);
-    state.artwork=id;persist();
+    state.artwork=id;updateProductUrl();persist();
     byId('art-status').textContent='';
     status.replaceChildren();
     invalidate();paintThumbnails();
@@ -558,7 +574,7 @@ for (const name of Object.keys(limits)) {
 }
 function setLid(open) {
   if (!ready || busy || state.open===open) return;
-  state.open=open;persist();updateLidButtons();
+  state.open=open;updateProductUrl();persist();updateLidButtons();
   cancelAnimationFrame(animationId);
   const startPose=pose, goal=open ? 1 : 0, start=performance.now();
   const duration=prefersReducedMotion.matches ? 0 : 560*Math.abs(goal-startPose);
@@ -611,8 +627,9 @@ setupEditor(async()=>{
     } else {
       paperStorageKey=setPersonalSheet({art:b.art,images},!!b.preset);
     }
-    state[guideSetting()]=b.guides;updateProductUrl();
+    state[guideSetting()]=b.guides;
   } else state.bookletInserted=false;
+  updateProductUrl();
   savedProject=project;
   cancelAnimationFrame(animationId);animating=false;pose=state.open ? 1 : 0;
   if (changed) studio.rebuild(state);
@@ -719,8 +736,7 @@ requestAnimationFrame(async ()=>{
     try {await restorePreset(state.bookletFormat);}
     catch(error) {paperMessage(error.message || 'Не удалось загрузить разворот. Выберите вариант ещё раз.',true);}
     if (state.artwork==='custom' && !savedProject) state.artwork=defaults.artwork;
-    studio.setArtwork(state.artwork==='custom' ? await customArtwork(savedProject,studio)
-      : await loadDesign(state.artwork,studio.renderer,studio.materials.bump));
+    studio.setArtwork(await boxArtwork(state.artwork));
     paper=await paperAssets;studio.updateBooklet(paper,currentSheet().images,state[guideSetting()]);
     showSelection(state.artwork);
     ready=true;bookletUI();byId('scene-status').textContent='';

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { designs,markBounds,bandBounds } from './artwork.js';
+import { designById,markBounds,bandBounds } from './artwork.js';
 
 const SVG_NS='http://www.w3.org/2000/svg';
 const palette='#212c47';
@@ -103,10 +103,11 @@ async function addTemplateLayer(surface,src,name,bounds,w,d,stretch=false) {
   surface.layers.push(layer);
 }
 export async function templateProject(state,baseImage) {
+  const design=designById(state.artwork);
+  if (design?.project) return copyProject(design.project,state);
   const dimensions=geometry(state);
   const blank=()=>({color:palette,layers:[]});
   const project={format:'box-studio',version:1,dimensions,bodyColor:'#24354c',lid:blank(),flap:blank()};
-  const design=designs.find(item=>item.id===state.artwork);
   const {width:w,depth:d,flap:f}=dimensions;
   const full=(depth)=>({x:w/2,y:depth/2,width:w,height:depth});
   if (!design) {

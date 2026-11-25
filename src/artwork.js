@@ -16,8 +16,11 @@ import centerThumb from './art/center-thumb.webp';
 import stripesMark from './art/stripes-mark.svg';
 import stripeBand from './art/stripe-band.svg';
 import stripesThumb from './art/stripes-thumb.webp';
+import facadeProject from './art/facade-emblem.box.json';
+import facadeThumb from './art/facade-emblem-thumb.webp';
 
 export const designs=[
+  {id:'facade-emblem',label:'Фасад со знаком',project:facadeProject,thumb:facadeThumb},
   {id:'center',label:'По центру',mark:centerMark,thumb:centerThumb,markRatio:226/37,markWidth:.4},
   {id:'stripes',label:'Полосы',mark:stripesMark,band:stripeBand,thumb:stripesThumb,markRatio:251/29,markWidth:.463},
   {id:'coast',label:'Побережье',lid:coastPhoto,mark:coastMark,thumb:coastThumb,markRatio:512/54,markWidth:.945},
@@ -25,6 +28,7 @@ export const designs=[
   {id:'architecture',label:'Фасад',lid:architectureLid,flap:architectureFlap,thumb:architectureThumb},
   {id:'birds',label:'Птицы',lid:birdsLid,flap:birdsFlap,thumb:birdsThumb}
 ];
+export const designById=id=>designs.find(design=>design.id===id);
 
 export function markBounds(design,w,d) {
   const width=Math.min(w*design.markWidth,d*.2*design.markRatio),height=width/design.markRatio;
@@ -39,7 +43,7 @@ export function bandBounds(w,d) {
 
 export async function loadDesign(id,renderer,bumpMap) {
   if (id==='base') return null;
-  const design=designs.find(item=>item.id===id);
+  const design=designById(id);
   const loader=new THREE.TextureLoader();
   const result={definition:design};
   const surfaces=[];
